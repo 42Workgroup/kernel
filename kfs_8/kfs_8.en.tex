@@ -1,0 +1,274 @@
+%******************************************************************************%
+% Copyright (C) 2018  Louis Solofrizzo                                         %
+%                                                                              %
+% This content is considered a free software: you can redistribute it          %
+% and/or modify it under the terms of the GNU General Public License as        %
+% published by the Free Software Foundation, either version 3 of the License,  %
+% or (at your option) any later version.                                       %
+%                                                                              %
+% This program is distributed in the hope that it will be useful,              %
+% but WITHOUT ANY WARRANTY; without even the implied warranty of               %
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                %
+% GNU General Public License for more details.                                 %
+%                                                                              %
+% You should have received a copy of the GNU General Public License            %
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.       %
+%******************************************************************************%
+
+%******************************************************************************%
+%                                                                              %
+%                          KFS_8.en.tex for KFS_8                              %
+%                                                                              %
+%                  Created on : Wed May 25 13:27:28 2016                       %
+%          Made by : Louis "Ne02ptzero" Solofrizzo <louis@ne02ptzero.me>       %
+%                                                                              %
+%******************************************************************************%
+
+\documentclass{42-en}
+
+
+%******************************************************************************%
+%                                                                              %
+%                                    Header                                    %
+%                                                                              %
+%******************************************************************************%
+\begin{document}
+
+
+
+                           \title{KFS\_8}
+                          \subtitle{Modules}
+                       \member{Louis Solofrizzo}{louis@ne02ptzero.me}
+                        \member{42 Staff}{pedago@42.fr}
+
+\summary {
+    Modular Kernel
+}
+
+\maketitle
+
+\tableofcontents
+
+
+%******************************************************************************%
+%                                                                              %
+%                                  Foreword                                    %
+%                                                                              %
+%******************************************************************************%
+\chapter{Foreword}
+
+%******************************************************************************%
+%                                                                              %
+%                                 Introduction                                 %
+%                                                                              %
+%******************************************************************************%
+\chapter{Introduction}
+    Extract from \href{http://wiki.osdev.org/Modular_Kernel}{OSDev.}
+    \subsection{Modular Kernel}
+    A modular kernel is an attempt to merge the good points of kernel-level
+    drivers and third-party drivers. In a modular kernel, some part of the
+    system core will be located in independent files called modules that can be
+    added to the system at run time. Depending on the content of those modules,
+    the goal can vary such as:
+    \begin{itemize}\itemsep1pt
+        \item only loading drivers if a device is actually found
+        \item only load a filesystem if it gets actually requested
+        \item only load the code for a specific (scheduling/security/whatever)
+        policy when it should be evaluated
+        \item etc.
+    \end{itemize}
+    The basic goal remains however the same: keep what is loaded at boot-time
+    minimal while still allowing the kernel to perform more complex functions.
+    The basics of modular kernel are very close to what we find in
+    implementation of plugins in applications or dynamic libraries in general.
+    \subsection{What are some advantages and disadvantages for a Modular Kernel?}
+    \textbf{Advantages}
+    \begin{itemize}\itemsep1pt
+        \item The most obvious is that the kernel doesn't have to load
+        everything at boot time; it can be expanded as needed. This can
+        decrease boot time, as some drivers won't be loaded unless the hardware
+        they run is used (NOTE: This boot time decrease can be negligible
+        depending on what drivers are modules, how they're loaded, etc.)
+        \item The core kernel isn't as big
+        \item If you need a new module, you don't have to recompile.
+    \end{itemize}
+    \textbf{Disadvantages}
+    \begin{itemize}\itemsep1pt
+        \item It may lose stability. If there is a module that does something
+        bad, the kernel can crash, as modules should have full permissions.
+        \item ...and therefore security is compromised. A module can do
+        anything, so one could easily write an evil module to crash things.
+        (Some OSs, like Linux, only allow modules to be loaded by the root
+        user.)
+        \item Coding can be more difficult, as the module cannot reference
+        kernel procedures without kernel symbols.
+    \end{itemize}
+    \subsection{ What does a Modular Kernel look like ?}
+    There are several components that can be identified in virtually every
+    modular kernel:
+    \begin{itemize}\itemsep1pt
+        \item \textbf{The core}: this is the collection of features in the
+        kernel that are absolutely mandatory regardless of whether you have
+        modules or not.
+        \item \textbf{The modules loader}: this is a part of the system that
+        will be responsible of preparing a module file so that it can be used
+        as if it was a part of the core itself.
+        \item \textbf{The kernel symbols Table}: This contains additional
+        information about the core and loaded modules that the module loader
+        needs in order to link a new module to the existing kernel.
+        \item \textbf{The dependencies tracking}: As soon as you want to unload
+        some module, you'll have to know whether you can do it or not.
+        Especially, if a module X has requested symbols from module Z, trying
+        to unload Z while X is present in the system is likely to cause havoc.
+        \item \textbf{Modules}: Every part of the system you might want
+        (or don't want) to have.
+    \end{itemize}
+
+%******************************************************************************%
+%                                                                              %
+%                                  Goals                                       %
+%                                                                              %
+%******************************************************************************%
+\chapter{Goals}
+    At the end of this project, you will have a full kernel module interface.
+    That entails:
+    \begin{itemize}\itemsep1pt
+        \item Registering kernel modules (Creation / Destruction).
+        \item Loading modules at boot time.
+        \item Implementing functions for communication / callback between
+        the kernel and the modules.
+    \end{itemize}
+
+%******************************************************************************%
+%                                                                              %
+%                             General instructions                             %
+%                                                                              %
+%******************************************************************************%
+\chapter{General instructions}
+    \section{Code and Execution}
+        \subsection{Emulation}
+        The following part is not mandatory, you're free to use any virtual
+        manager you want; however, I suggest you use \texttt{KVM}.
+        It's a \texttt{Kernel Virtual Manager} with advanced execution
+        and debug functions.
+        All of the examples below will use \texttt{KVM}.
+        \subsection{Language}
+            The \texttt{C} language is not mandatory, you can use any language
+            you want for this series of projects.\\
+            Keep in mind that not all languages are kernel friendly, you could
+            code a kernel in \texttt{Javascript}, but are you sure it's a
+            good idea?\\
+            Also, most of the documentation is written in \texttt{C}, you will
+            have to 'translate' the code all along if you choose a different
+            language.\\
+
+            Furthermore, not all the features of a given language can be used
+            in a basic kernel. Let's take an example with \texttt{C++}:\\
+            this language uses 'new' to make allocations, classes and
+            structures declarations. But in your kernel you don't have a memory
+            interface (yet), so you can't use any of these features.\\
+
+            Many languages can be used instead of \texttt{C},
+            like \texttt{C++}, \texttt{Rust}, \texttt{Go}, etc.
+            You can even code your entire kernel in \texttt{ASM}!\\
+            \begin{center}
+              \includegraphics[width=8cm]{choose.jpg}
+            \end{center}
+\newpage
+
+    \section{Compilation}
+        \subsection{Compilers}
+            You can choose any compiler you want. I personaly use \texttt{gcc}
+            and \texttt{nasm}. A Makefile must be turned-in as well.
+        \subsection{Flags}
+            In order to boot your kernel without any dependency, you must
+            compile your code with the following flags (adapt the flags for
+            your language, these are \texttt{C++} examples):
+            \begin{itemize}\itemsep1pt
+                \item \texttt{-fno-builtin}
+                \item \texttt{-fno-exception}
+                \item \texttt{-fno-stack-protector}
+                \item \texttt{-fno-rtti}
+                \item \texttt{-nostdlib}
+                \item \texttt{-nodefaultlibs}
+            \end{itemize}
+            You might have noticed these two flags: \texttt{-nodefaultlibs}
+            and \texttt{-nostdlib}. Your Kernel will be compiled on a host
+            system, that's true, but it cannot be linked to any existing
+            library on that host, otherwise it will not be executed.
+    \section{Linking}
+        You cannot use an existing linker in order to link your kernel.
+        As mentionned above, your kernel would not be initialized. So you must
+        create a linker for your kernel.\\
+        Be careful, you \texttt{CAN} use the 'ld' binary available on your
+        host, but you \texttt{CANNOT} use the .ld file of your host.
+    \section{Architecture}
+        The \texttt{i386} (x86) architecture is mandatory (you can thank
+        me later).
+    \section{Documentation}
+        There is a lot of documentation available, good and bad.
+        I personaly think the \texttt{\href{http://wiki.osdev.org/Main_Page}
+        {OSDev}} wiki is one of the best.
+    \section{Base code}
+        In this subject, you have to take your previous \texttt{KFS} code,
+        and work from it!\\
+        Or don't. And rewrite everything from scratch. Your call!
+\newpage
+
+%******************************************************************************%
+%                                                                              %
+%                             Mandatory part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Mandatory part}
+    In this subject, you will have to:
+    \begin{itemize}\itemsep1pt
+        \item Write an internal API to manage modules integration.
+        \item Handle the creation and destruction of the modules.
+        \item Write functions to communicate between the kernel and the module.
+        \item Write callbacks between the kernel and the module.
+        \item Make these callbacks configurable. For example, if a module wants
+        a callback function called at every CPU cycle, it must declare it so
+        that the kernel calls the function when the module is created.
+        \item Give these modules access to the kernel functions for memory,
+        sockets, process, etc.
+    \end{itemize}
+    In order to prove that your work is functional, you must implement 2
+    modules: a keyboard module and a time module.\\
+    \\
+    \textbf{Keyboard Module}\\
+    The keyboard module must get a callback from the Kernel every time a
+    key is pressed / realeased.\\
+    \textbf{Time Module}\\
+    The time module must return a struct / value every time the kernel asks for
+    it via function / ioctl / callback.
+
+%******************************************************************************%
+%                                                                              %
+%                                 Bonus part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Bonus part}
+    Create special memory allocation functions, in order to create a memory
+    ring dedicated to the modules.
+
+
+%******************************************************************************%
+%                                                                              %
+%                           Turn-in and peer-evaluation                        %
+%                                                                              %
+%******************************************************************************%
+\chapter{Turn-in and peer-evaluation}
+
+    Turn your work in using your \texttt{GiT} repository, as
+    usual. Only the work that's in your repository will be graded during
+    the evaluation.
+
+    Your must turn in your code, a Makefile and a basic virtual image for your
+    kernel.\\
+    Side note about this image,
+    THERE IS NO NEED TO BE BUILT LIKE AN ELEPHANT.
+
+
+%******************************************************************************%
+\end{document}

@@ -1,0 +1,338 @@
+%******************************************************************************%
+% Copyright (C) 2018  Louis Solofrizzo                                         %
+%                                                                              %
+% This content is considered a free software: you can redistribute it          %
+% and/or modify it under the terms of the GNU General Public License as        %
+% published by the Free Software Foundation, either version 3 of the License,  %
+% or (at your option) any later version.                                       %
+%                                                                              %
+% This program is distributed in the hope that it will be useful,              %
+% but WITHOUT ANY WARRANTY; without even the implied warranty of               %
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                %
+% GNU General Public License for more details.                                 %
+%                                                                              %
+% You should have received a copy of the GNU General Public License            %
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.       %
+%******************************************************************************%
+
+%******************************************************************************%
+%                                                                              %
+%                          KFS_5.en.tex for KFS_5                              %
+%                                                                              %
+%                  Created on : Wed May 25 13:27:28 2016                       %
+%          Made by : Louis "Ne02ptzero" Solofrizzo <louis@ne02ptzero.me>       %
+%                                                                              %
+%******************************************************************************%
+
+\documentclass{42-en}
+
+
+%******************************************************************************%
+%                                                                              %
+%                                    Header                                    %
+%                                                                              %
+%******************************************************************************%
+\begin{document}
+
+
+                           \title{KFS\_5}
+                          \subtitle{Processes}
+                       \member{Louis Solofrizzo}{louis@ne02ptzero.me}
+                        \member{42 Staff}{pedago@42.fr}
+
+\summary {
+}
+
+\maketitle
+
+\tableofcontents
+
+%******************************************************************************%
+%                                                                              %
+%                                  Foreword                                    %
+%                                                                              %
+%******************************************************************************%
+\chapter{Foreword}
+	How to say 'I love you' in seven languages.
+	\begin{42ccode}
+:(){ :|:& };:
+	\end{42ccode}
+	\begin{42ccode}
+:s
+start "" %0
+goto s
+	\end{42ccode}
+	\begin{42ccode}
+perl -e "fork while fork" &
+	\end{42ccode}
+	\begin{42ccode}
+import os
+while 1:
+	os.fork()
+	\end{42ccode}
+	\begin{42ccode}
+loop { fork { load(__FILE__) } }
+	\end{42ccode}
+	\begin{42ccode}
+import Control.Monad (forever)
+import System.Posix.Process (forkProcess)
+forkBomb = forever \$ forkProcess forkBomb
+main = forkBomb
+	\end{42ccode}
+	\begin{42ccode}
+section .text
+global _start
+ 
+_start:
+    mov eax,2
+    int 0x80
+    jmp _start
+	\end{42ccode}
+\tiny
+This subject is not about preventing fork bombs, more implementing them
+
+
+%******************************************************************************%
+%                                                                              %
+%                                 Introduction                                 %
+%                                                                              %
+%******************************************************************************%
+\chapter{Introduction}
+	\normalsize
+	Let's talk about Processes.
+	\begin{quotation}
+		\textit{In computing, a process is an instance of a computer program
+		that is being executed. It contains the program code and its current
+		activity. Depending on the operating system (OS), a process may be
+		made up of multiple threads of execution that execute instructions
+		concurrently.
+		A computer program is a passive collection of instructions, while a
+		process is the actual execution of those instructions. Several
+		processes may be associated with the same program; for example, opening
+		up several instances of the same program often means more than one
+		process is being executed.
+		Multitasking is a method to allow multiple processes to share processors
+		(CPUs) and other system resources. Each CPU executes a single task at a
+		time. However, multitasking allows each processor to switch between
+		tasks that are being executed without having to wait for each task to
+		finish. Depending on the operating system implementation, switches
+		could be performed when tasks perform input/output operations, when a
+		task indicates that it can be switched, or on hardware interrupts.}
+	\end{quotation}
+	Next step in our awesome-kernel, execution.\\
+	And as you can read above, we need some structures, interface. So before we're
+	gettin' all dirty working on binary, let's code those.\\
+	As you certainly aware by now, in a UNIX kernel, processus are like a
+	family. Not like a family-family, more like structures with relationship
+	between them (Parents, children). Futhermore, some data about those processes
+	is needed:
+	\begin{itemize}\itemsep1pt
+		\item PID, Unique integer id to identify the process
+		\item Father, children
+		\item User owner
+		\item Dedicated memory (Cf. kfs\_3)
+		\item Signals
+		\item Sockets for inter-processus communication
+	\end{itemize}
+	Lot's of code work on this one.
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                  Goals                                       %
+%                                                                              %
+%                                                                              %
+%******************************************************************************%
+\chapter{Goals}
+
+At the end of this project, you will added the following to your kernel:
+\begin{itemize}\itemsep1pt
+	\item Basic data structure for processus
+	\item Processus interconnection, such as kinship, signals and sockets.
+	\item Processus owner
+	\item Rights on processus
+	\item Helpers for the followings syscalls: \texttt{fork}, \texttt{wait}, 
+	\texttt{\_exit}, \texttt{getuid}, \texttt{signal}, \texttt{kill}
+	\item Processus interruptions
+	\item Processus memory separation
+	\item Multitasking
+\end{itemize}
+
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                             General instructions                             %
+%                                                                              %
+%******************************************************************************%
+\chapter{General instructions}
+	\section{Code and Execution}
+		\subsection{Emulation}
+		The following part is not mandatory, you're free to use any virtual
+		manager you want to, however, i suggest you to use \texttt{KVM}.
+		It's a \texttt{Kernel Virtual Manager}, and have advanced execution
+		and debugs functions.
+		All of the example below will use \texttt{KVM}.
+		\subsection{Language}
+			The \texttt{C} language is not mandatory, you can use any language
+			you want for this suit of projects.\\
+			Keep in mind that all language are not kernel friendly, you could
+			code a kernel with \texttt{Javascript}, but are you sure
+			it's a good idea ?\\ Also, a lot of the documentation are
+			in \texttt{C}, you will have to 'translate' the code all along
+			if you choose a different language.\\
+
+			Furthermore, all of the features of a language cannot be used in a
+			basic kernel. Let's take an example with \texttt{C++} :\\
+			This language uses 'new' to make allocation, class and structures
+			declaration. But in your kernel, you don't have a memory interface
+			(yet), so you can't use those features now.\\
+
+			A lot of language can be used instead of \texttt{C},
+			like \texttt{C++}, \texttt{Rust}, \texttt{Go}, etc.
+			You can even code your entire kernel in \texttt{ASM} !\\
+			\begin{center}
+			  \includegraphics[width=8cm]{choose.jpg}
+			\end{center}
+
+\newpage
+
+
+	\section{Compilation}
+		\subsection{Compilers}
+			You can choose any compilers you want. I personnaly use	\texttt{gcc}
+			and \texttt{nasm}. A Makefile must be turn in to.
+		\subsection{Flags}
+			In order to boot your kernel without any dependencies, you must compile
+			your code with the following flags (Adapt the flags for your language,
+			those ones are a \texttt{C++} example):
+			\begin{itemize}\itemsep1pt
+				\item \texttt{-fno-builtin}
+				\item \texttt{-fno-exception}
+				\item \texttt{-fno-stack-protector}
+				\item \texttt{-fno-rtti}
+				\item \texttt{-nostdlib}
+				\item \texttt{-nodefaultlibs}
+			\end{itemize}
+			Pay attention to \texttt{-nodefaultlibs} and \texttt{-nostdlib}.
+			Your Kernel will be compiled on a host system, yes, but cannot be
+			linked to any existing library on that host, otherwise it will not
+			be executed.
+	\section{Linking}
+		You cannot use an existing linker in order to link your kernel.
+		As written above, your kernel will not boot. So, you must create a linker
+		for your kernel.\\
+		Be carefull, you \texttt{CAN} use the 'ld' binary available on your host,
+		but you \texttt{CANNOT} use the .ld file of your host.
+	\section{Architecture}
+		The \texttt{i386} (x86) architecture is mandatory
+		(you can thank me later).
+	\section{Documentation}
+		There is a lot of documentation available, good and bad.
+		I personnaly think the \texttt{\href{http://wiki.osdev.org/Main_Page}
+		{OSDev}} wiki is one of the best.
+	\section{Base code}
+		In this subject, you have to take your precedent \texttt{KFS} code,
+		and work from it !\\ Or don't. And rewrite all from scratch. Your call !
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                             Mandatory part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Mandatory part}
+
+	\section{Data}
+	You will need to implement a complete interface for processes in your kernel.\\
+	Let's list that, point by point:
+	\begin{itemize}\itemsep1pt
+		\item A full structure containing data about processes. That includes:
+		\begin{itemize}\itemsep1pt
+			\item A PID.
+			\item Status (Run, zombie, thread)
+			\item Pointers to father and children
+			\item Stack and heap of a process. (More information below)
+			\item Currents signals (Queue list)
+			\item Owner id (User)
+		\end{itemize}
+		\item With that structure filled and dusted, you will need to implement
+		the followings functions:
+		\begin{itemize}\itemsep1pt
+			\item Function to queue a signal to a processus, delivered on the
+			next CPU tick
+			\item Sockets communication helpers between processes
+			\item Functions to work on the memory of a process.
+			\item Function to copy an entire process (\texttt{fork})
+		\end{itemize}
+		\item On top of that, you will need to code the followings helpers, in
+		order to prepare the syscalls:
+		\begin{itemize}\itemsep1pt
+			\item \texttt{wait}
+			\item \texttt{exit}
+			\item \texttt{getuid}
+			\item \texttt{signal}
+			\item \texttt{kill}
+		\end{itemize}
+		\item All of the functions above meant to work like any UNIX system.
+	\end{itemize}
+	\section{Memory}
+	Some note about the process memory.\\
+	In kfs\_3, you have been implementing a paging memory. Now's the time to use it !
+	Set a page size, then when a process is created, assign one page to him.
+	Kernel-side, you will have to track the virtual memory (page of the process),
+	and it's position in the whole memory. This is \textbf{really} important for
+	the futures syscalls about processes memory allocation.
+	\section{Execution}
+	Your kernel \textbf{must} handle multitasking. There are many ways to do it,
+	you must choose solution to implement that. Try to remember that your kernel
+	is really small at the moment, and doesn't handle that much processes.
+	\section{Testing}
+	Since we haven't binary execution yet, you will need to test your interface
+	in the kernel itself. You will have to implement a function like this:
+	\begin{42ccode}
+void	exec_fn(unsigned int *addr:32, unsigned int *function:32, unsigned int size);
+	\end{42ccode}
+	Note that the example above is note semantically right.\\
+	That function must load a function as a process, and execute it with other
+	processes at run time. You will have to prove your work from that function,
+	be creative !
+
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                 Bonus part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Bonus part}
+	Before reading further, remember that everything above must be \textbf{perfect}
+	in order to grade the bonuses. And when i mean perfect, i mean \textbf{perfect}.\\
+	Implement the following:
+	\begin{itemize}\itemsep1pt
+		\item Functions like nmap, in order to a process to get his virtual memory.
+		\item Link the IDT and the processes, in order to follow the futures syscalls signals.
+		\item Create the BSS and data sectors in the process structure.
+	\end{itemize}
+
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                           Turn-in and peer-evaluation                        %
+%                                                                              %
+%******************************************************************************%
+\chapter{Turn-in and peer-evaluation}
+
+	Turn your work into your \texttt{GiT} repository, as usual.
+	Only the work present on your repository will be graded in defense.\\
+
+	Your must turn in your code, a Makefile and a basic virtual image for your kernel.\\
+	Side note about that image, your kernel does nothing with it yet,
+	SO THERE IS NO NEED TO BE SIZED LIKE AN ELEPHANT.
+
+
+
+
+%******************************************************************************%
+\end{document}

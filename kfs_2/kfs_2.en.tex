@@ -1,0 +1,291 @@
+%******************************************************************************%
+% Copyright (C) 2018  Louis Solofrizzo                                         %
+%                                                                              %
+% This content is considered a free software: you can redistribute it          %
+% and/or modify it under the terms of the GNU General Public License as        %
+% published by the Free Software Foundation, either version 3 of the License,  %
+% or (at your option) any later version.                                       %
+%                                                                              %
+% This program is distributed in the hope that it will be useful,              %
+% but WITHOUT ANY WARRANTY; without even the implied warranty of               %
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                %
+% GNU General Public License for more details.                                 %
+%                                                                              %
+% You should have received a copy of the GNU General Public License            %
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.       %
+%******************************************************************************%
+
+%******************************************************************************%
+%                                                                              %
+%                           KFS_2.en.tex for KFS_2                             %
+%                                                                              %
+%                  Created on : Wed May 26 13:37:00 2016                       %
+%          Made by : Louis "Ne02ptzero" Solofrizzo <louis@ne02ptzero.me>       %
+%                                                                              %
+%******************************************************************************%
+
+\documentclass{42-en}
+
+
+%******************************************************************************%
+%                                                                              %
+%                                    Header                                    %
+%                                                                              %
+%******************************************************************************%
+\begin{document}
+
+
+
+                           \title{KFS\_2}
+                          \subtitle{GDT \& Stack}
+                       \member{Louis Solofrizzo}{louis@ne02ptzero.me}
+                        \member{42 Staff}{pedago@42.fr}
+
+\summary {
+	Let's code the stack !
+}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                  Forewords                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Forewords}
+	\subsection{Hunter 6.2.4 Rotation}
+		\begin{itemize}\itemsep1pt
+			\item Barrage
+			\item Aspect of the pack
+			\item Die
+			\item Blame the heal
+		\end{itemize}
+	\subsection{Rogue 6.2.4 Rotation}
+		\begin{itemize}\itemsep1pt
+			\item Pull without the tank
+			\item Die
+			\item Blame the heal
+		\end{itemize}
+	\subsection{Warrior tank 6.2.4 Rotation}
+		\begin{itemize}\itemsep1pt
+			\item Pull the entire dungeon
+			\item Die
+			\item Blame the heal
+		\end{itemize}
+	\subsection{Druid Heal 6.2.4 Rotation}
+		\begin{itemize}\itemsep1pt
+			\item Blame the other heal
+		\end{itemize}
+	\subsection{Death Knight 6.2.4 Rotation}
+		\begin{itemize}\itemsep1pt
+			\item Roll
+			\item Your
+			\item Head
+			\item On
+			\item The
+			\item Keyboard
+		\end{itemize}
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                 Introduction                                 %
+%                                                                              %
+%******************************************************************************%
+\chapter{Introduction}
+
+	Welcome in \texttt{Kernel from Scratch}, second subject.
+	This time, you will code a stack, and integrate it with the \texttt{GDT}.\\
+	\\
+	What is a \texttt{GDT} ? Let's see:\\
+	\\
+	The \texttt{GDT} ("Global Descriptor Table") is a data structure used to define the
+	different memory areas: the base address, the size and access privileges
+	like execute and write. These memory areas are called "segments".\\
+	\\In a \texttt{GDT}, you can find:
+	\begin{itemize}\itemsep1pt
+		\item Kernel code, used to store the executable binary code
+		\item Kernel data
+		\item Kernel stack, used to store the call stack during kernel execution
+		\item User code, used to store the executable binary code for user programs
+		\item User program data
+		\item User stack, used to store the call stack during execution in userland
+	\end{itemize}
+	I think you can see why this thing is really important in a Kernel !\\
+	\\
+	Next, the stack. I'm sure you all know what a stack is, but here's a friendy
+	reminder:
+	\begin{quotation}
+		\textit{In computer science, a stack is an abstract data type that serves as a
+		collection of elements, with two principal operations: push, which adds an
+		element to the collection, and pop, which removes the most recently added
+		element that was not yet removed. The order in which elements come off a
+		stack gives rise to its alternative name, LIFO (for last in, first out).}
+	\end{quotation}
+	Get it ? Good. Now, let's move on.
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                  Goals                                       %
+%                                                                              %
+%******************************************************************************%
+\chapter{Goals}
+
+
+	In this subject, you will have to \texttt{create}, \texttt{fill} and \texttt{link}
+	a Global Descriptor Table into your Kernel.\\
+	\\
+	Yup, that's it. Not so much, eh ?\\
+	\\
+	Actually, you will have to understand how "memory" really works in a system,
+	how the Stack and RAM works, how to use it, how to fill it and how to link it
+	with the \texttt{BIOS}.\\
+	\\
+	Yeah, the \texttt{BIOS}. Thanks to \texttt{GRUB}, it will help you a lot !\\
+	Good thing you already installed it.
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                             General instructions                             %
+%                                                                              %
+%******************************************************************************%
+\chapter{General instructions}
+	\section{Code and Execution}
+		\subsection{Emulation}
+		The following part is not mandatory, you're free to use any virtual
+		manager you want to, however, i suggest you to use \texttt{KVM}.
+		It's a \texttt{Kernel Virtual Manager}, and have advanced execution
+		and debugs functions.
+		All the example below will use \texttt{KVM}.
+		\subsection{Language}
+			The \texttt{C} language is not mandatory, you can use any language
+			you want for this suit of projects.\\
+			Keep in mind that all language are not kernel friendly, you could
+			code a kernel with \texttt{Javascript}, but are you sure
+			it's a good idea ?\\ Also, a lot of the documentation are
+			in \texttt{C}, you will have to 'translate' the code all along
+			if you choose a different language.\\
+
+			Furthermore, all of the features of a language cannot be used in a
+			basic kernel. Let's take an example with \texttt{C++} :\\
+			This language uses 'new' to make allocation, class and structures
+			declaration. But in your kernel, you don't have a memory interface
+			(yet), so you can't use those features now.\\
+
+			A lot of language can be used instead of \texttt{C},
+			like \texttt{C++}, \texttt{Rust}, \texttt{Go}, etc.
+			You can even code your entire kernel in \texttt{ASM} !\\
+			\begin{center}
+			  \includegraphics[width=8cm]{choose.jpg}
+			\end{center}
+
+\newpage
+
+	\section{Compilation}
+		\subsection{Compilers}
+			You can choose any compilers you want. I personnaly use	\texttt{gcc}
+			and \texttt{nasm}. A Makefile must be added to your repo.
+		\subsection{Flags}
+			In order to boot your kernel without any dependencies, you must compile
+			your code with the following flags (Adapt the flags for your language,
+			those ones are for \texttt{C++}, for instance):
+			\begin{itemize}\itemsep1pt
+				\item \texttt{-fno-builtin}
+				\item \texttt{-fno-exception}
+				\item \texttt{-fno-stack-protector}
+				\item \texttt{-fno-rtti}
+				\item \texttt{-nostdlib}
+				\item \texttt{-nodefaultlibs}
+			\end{itemize}
+			Pay attention to \texttt{-nodefaultlibs} and \texttt{-nostdlib}.
+			Your Kernel will be compiled on a host system, yes, but cannot be
+			linked to any existing library on that host, otherwise it will not
+			be executed.
+	\section{Linking}
+		You cannot use an existing linker in order to link your kernel.
+		As written above, your kernel will not boot. So, you must create a linker
+		for your kernel.\\
+		Be carefull, you \texttt{CAN} use the 'ld' binary available on your host,
+		but it is \textbf{FORBIDDEN} to use the .ld file of your host.
+	\section{Architecture}
+		The \texttt{i386} (x86) architecture is mandatory (you can thank me later).
+	\section{Documentation}
+		There is a lot of documentation available, good and bad.
+		I personnaly think the \texttt{\href{http://wiki.osdev.org/Main_Page}
+		{OSDev}} wiki is one of the best.
+	\section{Base code}
+		In this subject, you have to take your precedent \texttt{KFS} code,
+		and work from it !\\ Or not... and rewrite all from the beginning. 
+		Your call !
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                             Mandatory part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Mandatory part}
+
+	Let's sum this up:
+	\begin{itemize}\itemsep1pt
+		\item You must create a \texttt{Global Descriptor Table}.
+		\item Your \texttt{GDT} must contain:
+		\begin{itemize}\itemsep1pt
+			\item Kernel Code
+			\item Kernel Data
+			\item Kernel stack
+			\item User code
+			\item User data
+			\item User stack
+			\item Your work should not exceed 10 MB.
+		\end{itemize}
+		\item You must declare your \texttt{GDT} to the \texttt{BIOS}.
+		\item The \texttt{GDT} must be set at address \texttt{0x00000800}.
+	\end{itemize}
+	When this is done, you have to code a tool to print the kernel stack,
+	in a human-friendly way. (Tip: If you haven't made a \texttt{printk} yet,
+	now is a good time !)
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                                 Bonus part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Bonus part}
+
+	Assuming your keyboard work correctly in your Kernel, and you able to catch
+	an entry, let's code a Shell !\\
+	Not a POSIX Shell, just a minimalistic shell with a few commands, for 
+	debugging purposes.\\
+	\\
+	For example, you could implement the print-kernel-stack-thing in this shell,
+	and some other things like \texttt{reboot}, \texttt{halt} and such.\\
+	\\
+	Have fun !
+
+\newpage
+%******************************************************************************%
+%                                                                              %
+%                           Turn-in and peer-evaluation                        %
+%                                                                              %
+%******************************************************************************%
+\chapter{Turn-in and peer-evaluation}
+
+	Turn your work into your \texttt{GiT} repository, as usual.
+	Only the work present on your repository will be graded in defense.\\
+
+	Your must turn in your code, a Makefile and a basic virtual image for your kernel.\\
+	Side note about that image, your kernel does nothing with it yet,
+	SO THERE IS NO NEED TO BE SIZED LIKE AN ELEPHANT.
+
+
+
+
+%******************************************************************************%
+\end{document}

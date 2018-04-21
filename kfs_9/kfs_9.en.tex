@@ -1,0 +1,219 @@
+%******************************************************************************%
+% Copyright (C) 2018  Louis Solofrizzo                                         %
+%                                                                              %
+% This content is considered a free software: you can redistribute it          %
+% and/or modify it under the terms of the GNU General Public License as        %
+% published by the Free Software Foundation, either version 3 of the License,  %
+% or (at your option) any later version.                                       %
+%                                                                              %
+% This program is distributed in the hope that it will be useful,              %
+% but WITHOUT ANY WARRANTY; without even the implied warranty of               %
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                %
+% GNU General Public License for more details.                                 %
+%                                                                              %
+% You should have received a copy of the GNU General Public License            %
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.       %
+%******************************************************************************%
+
+%******************************************************************************%
+%                                                                              %
+%                          KFS_9.en.tex for KFS_9                              %
+%                                                                              %
+%                  Created on : Wed May 25 13:27:28 2016                       %
+%          Made by : Louis "Ne02ptzero" Solofrizzo <louis@ne02ptzero.me>       %
+%                                                                              %
+%******************************************************************************%
+
+\documentclass{42-en}
+
+
+%******************************************************************************%
+%                                                                              %
+%                                    Header                                    %
+%                                                                              %
+%******************************************************************************%
+\begin{document}
+
+
+
+                           \title{KFS\_9}
+                          \subtitle{ELF}
+                       \member{Louis Solofrizzo}{louis@ne02ptzero.me}
+                        \member{42 Staff}{pedago@42.fr}
+
+\summary {
+    Finally some execution.
+}
+
+\maketitle
+
+\tableofcontents
+
+
+%******************************************************************************%
+%                                                                              %
+%                                  Foreword                                    %
+%                                                                              %
+%******************************************************************************%
+\chapter{Foreword}
+
+%******************************************************************************%
+%                                                                              %
+%                                 Introduction                                 %
+%                                                                              %
+%******************************************************************************%
+\chapter{Introduction}
+    \subsection{ELF}
+        \begin{quotation}
+        \textit{In computing, the Executable and Linkable Format (ELF, formerly
+        called Extensible Linking Format) is a common standard file format for
+        executables, object code, shared libraries, and core dumps. First
+        published in the System V Release 4 (SVR4) Application Binary Interface
+        (ABI) specification, and later in the Tool Interface Standard, it
+        was quickly accepted among different vendors of Unix systems. In 1999
+        it was chosen as the standard binary file format for Unix and Unix-like
+        systems on x86 by the 86open project.
+        ELF is flexible and extensible by design, and it is not bound to any
+        particular processor or architecture. This has allowed it to be adopted
+        by many different operating systems on many different platforms.}
+        \end{quotation}
+        As you can read above, ELF is a format used to read binary files.
+        It is pretty common in many OSs, and now's the time to implement it!\\
+        More info \href{http://wiki.osdev.org/ELF}{Here.}
+
+%******************************************************************************%
+%                                                                              %
+%                                  Goals                                       %
+%                                                                              %
+%******************************************************************************%
+\chapter{Goals}
+    At the end of this subject, you will have:
+    \begin{itemize}\itemsep1pt
+        \item A complete interface to read, parse, stock and execute ELF files.
+        \item Syscalls to read ELF files and launch a process with them.
+        \item A kernel module in ELF, ready to be inserted at run time.
+    \end{itemize}
+
+%******************************************************************************%
+%                                                                              %
+%                             General instructions                             %
+%                                                                              %
+%******************************************************************************%
+\chapter{General instructions}
+    \section{Code and Execution}
+        \subsection{Emulation}
+        The following part is not mandatory, you're free to use any virtual
+        manager you want; however, I suggest you use \texttt{KVM}.
+        It's a \texttt{Kernel Virtual Manager} with advanced execution
+        and debug functions.
+        All of the examples below will use \texttt{KVM}.
+        \subsection{Language}
+            The \texttt{C} language is not mandatory, you can use any language
+            you want for this series of projects.\\
+            Keep in mind that not all languages are kernel friendly though, you
+            could code a kernel in \texttt{Javascript}, but are you sure it's a
+            good idea?\\
+            Also, most of the documentation is written in \texttt{C}, you will
+            have to 'translate' the code all along if you choose a different
+            language.\\
+
+            Furthermore, not all the features of a given language can be used
+            in a basic kernel. Let's take an example with \texttt{C++}:\\
+            this language uses 'new' to make allocations, classes and
+            structures declarations. But in your kernel you don't have a memory
+            interface (yet), so you can't use any of these features.\\
+
+            Many languages can be used instead of \texttt{C},
+            like \texttt{C++}, \texttt{Rust}, \texttt{Go}, etc.
+            You can even code your entire kernel in \texttt{ASM}!\\
+            So yes, you may choose a language. But choose wisely.
+            \begin{center}
+              \includegraphics[width=8cm]{choose.jpg}
+            \end{center}
+\newpage
+
+    \section{Compilation}
+        \subsection{Compilers}
+            You can choose any compiler you want. I personaly use \texttt{gcc}
+            and \texttt{nasm}. A Makefile must be turned-in as well.
+        \subsection{Flags}
+            In order to boot your kernel without any dependency, you must
+            compile your code with the following flags (adapt the flags for
+            your language, these are \texttt{C++} examples):
+            \begin{itemize}\itemsep1pt
+                \item \texttt{-fno-builtin}
+                \item \texttt{-fno-exception}
+                \item \texttt{-fno-stack-protector}
+                \item \texttt{-fno-rtti}
+                \item \texttt{-nostdlib}
+                \item \texttt{-nodefaultlibs}
+            \end{itemize}
+            You might have noticed these two flags: \texttt{-nodefaultlibs}
+            and \texttt{-nostdlib}. Your Kernel will be compiled on a host
+            system, that's true, but it cannot be linked to any existing
+            library on that host, otherwise it will not be executed.
+    \section{Linking}
+        You cannot use an existing linker in order to link your kernel.
+        As mentionned above, your kernel would not be initialized. So you must
+        create a linker for your kernel.\\
+        Be careful, you \texttt{CAN} use the 'ld' binary available on your
+        host, but you \texttt{CANNOT} use the .ld file of your host.
+    \section{Architecture}
+        The \texttt{i386} (x86) architecture is mandatory (you can thank
+        me later).
+    \section{Documentation}
+        There is a lot of documentation available, good and bad.
+        I personaly think the \texttt{\href{http://wiki.osdev.org/Main_Page}
+        {OSDev}} wiki is one of the best.
+    \section{Base code}
+        In this subject, you have to take your previous \texttt{KFS} code,
+        and work from it!\\
+        Or don't. And rewrite everything from scratch. Your call!
+\newpage
+
+%******************************************************************************%
+%                                                                              %
+%                             Mandatory part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Mandatory part}
+    In this project, you will have to:
+    \begin{itemize}\itemsep1pt
+        \item Create a parser for ELF files.
+        \item Create a loader for ELF files.
+        \item Execute an ELF file.
+        \item Implement these points in a \texttt{execve (2)}-like
+        syscall.
+        \item Make the syscall create a process associated with the ELF file.
+        \item Rewrite your API modules, so that you can load
+        modules in ELF at run time.
+        \item Load the modules, list them and unload them.
+    \end{itemize}
+
+%******************************************************************************%
+%                                                                              %
+%                                 Bonus part                                   %
+%                                                                              %
+%******************************************************************************%
+\chapter{Bonus part}
+    You must create a memory ring for the modules (specifically, built-in and
+    run-time modules).
+
+%******************************************************************************
+%                                                                              %
+%                           Turn-in and peer-evaluation                        %
+%                                                                              %
+%******************************************************************************%
+\chapter{Turn-in and peer-evaluation}
+
+    Turn your work in using your \texttt{GiT} repository, as
+    usual. Only the work that's in your repository will be graded during
+    the evaluation.
+
+    Your must turn in your code, a Makefile and a basic virtual image for your
+    kernel.\\
+    Side note about this image,
+    THERE IS NO NEED TO BE BUILT LIKE AN ELEPHANT.
+
+%******************************************************************************%
+\end{document}
